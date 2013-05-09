@@ -1,96 +1,34 @@
-#include <egg3/Egg3.h>
-typedef offset64_t pageno_t;
+#include "eggIndex.h"
 
-typedef void* eggIndexRd_t*;
-
-typedef struct eggIndexBoughRd
+int rdcmp_bough_str(eggIndexBoughRd_t* pSrcRd, eggIndexBoughRd_t* pDestRd)
 {
-    pageno_t lchild;  //right child Nd
-    pageno_t host;
-    uint16_t kSz;
-}eggIndexBoughRd_t;
+    void* p_src_key = pSrcRd + 1;
+    void* p_dest_key = pDestRd + 1;
+    size16_t n_src_sz = pSrcRd->kSz;
+    size16_t n_dest_sz = pDestRd->kSz;
+    size16_t n_cmp_sz = n_src_sz > n_dest_sz ? n_dest_sz : n_src_sz;
+    int n_cmp_ret = 0;
+    if ((n_cmp_ret = memcmp(p_src_key, p_dest_key, (size_t)n_cmp_sz)) == 0)
+    {
+        n_cmp_ret = n_src_sz - n_dest_sz;
+    }
+    return n_cmp_ret;
+}
 
-
-typedef struct eggIndexLeafRd
+int rdcmp_leaf_str(eggIndexLeafRd_t* pSrcRd, eggIndexLeafRd_t* pDestRd)
 {
-    uint16_t kSz;
-    uint32_t vSz;
-}eggIndexLeafRd_t;
-
-
-//common Nd struct
-typedef struct eggIndexNd
-{
-    type_t ty;
-    uint32_t useSz;    
-}eggIndexNd_t;
-
-
-typedef struct eggIndexBoughNd
-{
-    type_t ty;
-    uint32_t useSz;
-    pageno_t rchild; // the left child Nd of first record
-
-}eggIndexBoughNd_t;
-
-
-typedef struct eggIndexLeafNd
-{
-    type_t ty;
-    uint32_t useSz;
-    pageno_t next; // next leaf
-    
-}eggIndexLeafNd_t;
-
-typedef struct eggIndexInfo
-{
-    pageno_t root;
-    int nodeSz;
-    type_t rdtype;
-    size32_t rdmaxSz;
-}eggIndexInfo_t;
-
-typedef struct eggIndexView
-{
-     HVIEWSTREAM hViewStream;
-    eggIndexInfo_t info;
-}eggIndexView_t;
-
-
-typedef struct eggIndexNdList
-{
-    pageno_t pageno;
-    eggIndexNd_t* nd;
-    eggIndexBoughRd_t* fatherRd;  //the last level record of every node   
-    struct eggIndexNdList* next;
-}eggIndexNdList_t;
-#define EGG_INVALID_PAGENO (0)
-
-#define EGG_IDXNDSZ (16*1024)
-#define EGG_IDX_BOUGH_ND 1
-#define EGG_IDX_LEAF_ND  2
-
-#define EGG_IDXBOUGHRD_SZ(rd) ((rd)->kSz + sizeof(eggIndexboughRd_t) )
-#define EGG_IDXLEAFRD_SZ(rd) ((rd)->kSz + (rd)->vSz + sizeof(eggIndexleafRd_t) )
-
-#define EGG_IDXND_TAILPOS(nd) ((char*)(nd) + nd->useSz )
-
-
-#define EGG_IDXBOUGHND_IS_FULL(nd, rd)                              \
-    ((EGG_IDXNDSZ - (nd)->useSz) < EGG_IDXBOUGHRD_SZ(rd) ? 1 :0)
-
-#define EGG_IDXLEAFND_IS_FULL(nd, rd)                           \
-    ((EGG_IDXNDSZ - (nd)->useSz) < EGG_IDXLEAFRD_SZ(rd) ? 1 :0)
-
-typedef int INDEXRDCMP(void*, void*); //return
-                                 // 0  : =
-                                 // 1  : > 
-                                 //-1  : < 
-
-
-#define EGG_IDXBOUGHND_DATASZ (EGG_IDXNDSZ - sizeof(eggIndexboughNd_t) )
-#define EGG_IDXLEAFND_DATASZ (EGG_IDXNDSZ - sizeof(eggIndexLeafNd_t) )
+    void* p_src_key = pSrcRd + 1;
+    void* p_dest_key = pDestRd + 1;
+    size16_t n_src_sz = pSrcRd->kSz;
+    size16_t n_dest_sz = pDestRd->kSz;
+    size16_t n_cmp_sz = n_src_sz > n_dest_sz ? n_dest_sz : n_src_sz;
+    int n_cmp_ret = 0;
+    if ((n_cmp_ret = memcmp(p_src_key, p_dest_key, (size_t)n_cmp_sz)) == 0)
+    {
+        n_cmp_ret = n_src_sz - n_dest_sz;
+    }
+    return n_cmp_ret;
+}
 
 
 eggIndexNdList_t* eggIndexNdList_push(eggIndexNdList_t* pNdList,pageno_t pageno, void* nd, eggIndexBoughRd_t* fatherRd)
@@ -101,7 +39,6 @@ eggIndexNdList_t* eggIndexNdList_push(eggIndexNdList_t* pNdList,pageno_t pageno,
         pNewNdList->pageno = pageno;
         pNewNdList->nd = nd;
         pNewNdList->next = pNdList;
-        pNewNdList->fatherRd = fatherRd;
         return pNewNdList;
     }
     else
@@ -110,7 +47,6 @@ eggIndexNdList_t* eggIndexNdList_push(eggIndexNdList_t* pNdList,pageno_t pageno,
         pNdList->pageno = pageno;
         pNdList->nd = nd;
         pNdList->next = EGG_NULL;
-        pNewNdList->fatherRd = fatherRd;
         return pNdList;
     }
 }
@@ -138,9 +74,9 @@ eggIndexBoughRd_t* eggIndexBoughRd_new(char* key, uint16_t kSz)
 
 eggIndexBoughRd_t* eggIndexRd_leaf_to_bough(eggIndexLeafRd_t* hLeafRd)
 {
-     eggIndexBoughRd_t* p_bough_rd = eggIndexBoughRd_new(hLeafRd+1, hLeafRd->kSz);
-     eggIndexLeafRd_delete(hLeafRd);
-     return p_bough_rd;
+    eggIndexBoughRd_t* p_bough_rd = eggIndexBoughRd_new((char*)(hLeafRd + 1), hLeafRd->kSz);
+    eggIndexLeafRd_delete(hLeafRd);
+    return p_bough_rd;
 }
 
 
@@ -182,13 +118,13 @@ eggIndexBoughNd_t* eggIndexBoughNd_init(void* addr)
     return p_nd;
 }
 
-int eggIndexBoughNd_find(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, char** pos, fnCmp fn)
+int eggIndexBoughNd_find(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, char** pos, INDEXRDCMP fn)
 {
     if(!pNd || !pRd)
     {
         return 0;
     }
-    eggIndexBoughRd_t* p_iter = pNd + 1;
+    eggIndexBoughRd_t* p_iter = (eggIndexBoughRd_t*)(pNd + 1);
     int n_find_ret = 0;
     void* p_rd_tail = (char*)pNd + pNd->useSz;
     while(p_iter != p_rd_tail)
@@ -196,7 +132,7 @@ int eggIndexBoughNd_find(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, char** 
         int n_cmp_ret = fn(p_iter, pRd);
         if (n_cmp_ret == 1)
         {
-            p_iter = (char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter);
+            p_iter = (eggIndexBoughRd_t*)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter));
         }
         else if (n_cmp_ret == -1)
         {
@@ -209,12 +145,12 @@ int eggIndexBoughNd_find(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, char** 
         }
     }
     
-    *pos = p_iter;
+    *pos = (char*)p_iter;
     return n_find_ret;
 }
 
 
-int eggIndexBoughNd_insert(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, fnCmp fn)
+int eggIndexBoughNd_insert(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, INDEXRDCMP fn)
 {
     if(!pNd || !pRd || EGG_IDXBOUGHND_IS_FULL(pNd, pRd))
     {
@@ -222,13 +158,13 @@ int eggIndexBoughNd_insert(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, fnCmp
     }
 
     eggIndexBoughRd_t* p_insert_pos = EGG_NULL;
-    int n_find_ret = eggIndexBoughNd_find(pNd, pRd, &p_insert_pos, fn);
+    int n_find_ret = eggIndexBoughNd_find(pNd, pRd, (char**)&p_insert_pos, fn);
     if(!n_find_ret)
     {
         void* p_rd_tail = (char*)pNd + pNd->useSz;
         if(p_insert_pos != p_rd_tail)
         {
-            size_t n_move_size = p_rd_tail - p_insert_pos;
+            size_t n_move_size = p_rd_tail - (void*)p_insert_pos;
             memmove((char*)p_insert_pos + EGG_IDXBOUGHRD_SZ(pRd), p_insert_pos, n_move_size);
         }
         memcpy(p_insert_pos, pRd, EGG_IDXBOUGHRD_SZ(pRd));
@@ -255,7 +191,7 @@ int eggIndexBoughNd_insert_withPos(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pR
     void* p_rd_tail = (char*)pNd + pNd->useSz;
     if(p_insert_pos != p_rd_tail)
     {
-        size_t n_move_size = p_rd_tail - p_insert_pos;
+        size_t n_move_size = p_rd_tail - (void*)p_insert_pos;
         memmove((char*)p_insert_pos + EGG_IDXBOUGHRD_SZ(pRd), p_insert_pos, n_move_size);
     }
     memcpy(p_insert_pos, pRd, EGG_IDXBOUGHRD_SZ(pRd));
@@ -266,18 +202,18 @@ int eggIndexBoughNd_insert_withPos(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pR
 }
 
 
-eggIndexBoughRd_t* eggIndexBoughNd_split(eggIndexBoughNd_t* pOrgNd, eggIndexBoughNd_t* pNewNd, eggIndexBoughRd_t* pRd, fnCmp fn)
+eggIndexBoughRd_t* eggIndexBoughNd_split(eggIndexBoughNd_t* pOrgNd, eggIndexBoughNd_t* pNewNd, eggIndexBoughRd_t* pRd, INDEXRDCMP fn)
 {
      uint32_t n_old_sz = pOrgNd->useSz - sizeof(eggIndexBoughNd_t) ;
     uint32_t n_tmp_sz = n_old_sz + EGG_IDXBOUGHRD_SZ(pRd);
     char* lp_tmp_buf = (char*)malloc(n_tmp_sz);
     memcpy(lp_tmp_buf, pOrgNd + 1, n_old_sz);  
-    eggIndexBoughRd_t* p_iter = lp_tmp_buf;
+    eggIndexBoughRd_t* p_iter = (eggIndexBoughRd_t*)lp_tmp_buf;
     
     while(1)
     {
         
-         if(p_iter == (lp_tmp_buf + n_old_sz ) )
+        if((unsigned  long)p_iter == (size_t)(lp_tmp_buf + n_old_sz ) )
         {
             memcpy(p_iter, pRd, EGG_IDXBOUGHRD_SZ(pRd));
             break;
@@ -286,11 +222,11 @@ eggIndexBoughRd_t* eggIndexBoughNd_split(eggIndexBoughNd_t* pOrgNd, eggIndexBoug
         if (n_cmp_ret == 1)
         {
            
-            p_iter = (char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter);
+            p_iter = (eggIndexBoughRd_t*)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter));
         }
         else if (n_cmp_ret == -1)
         {
-            size_t n_move_size = lp_tmp_buf + n_old_sz - p_iter;
+            size_t n_move_size = (size_t)(lp_tmp_buf + n_old_sz) - (size_t)p_iter;
             memmove((char*)p_iter + EGG_IDXBOUGHRD_SZ(pRd), p_iter, n_move_size);
             memcpy(p_iter, pRd, EGG_IDXBOUGHRD_SZ(pRd));
             break;
@@ -306,21 +242,21 @@ eggIndexBoughRd_t* eggIndexBoughNd_split(eggIndexBoughNd_t* pOrgNd, eggIndexBoug
 
     char* lp_mid_pos = lp_tmp_buf + n_tmp_sz/2;
     eggIndexBoughRd_t* lp_mid_rd = EGG_NULL;
-    p_iter = lp_tmp_buf;
+    p_iter = (eggIndexBoughRd_t*)lp_tmp_buf;
 
-    while(p_iter != (lp_tmp_buf + n_tmp_sz))
+    while((size_t)p_iter != (size_t)(lp_tmp_buf + n_tmp_sz))
     {
-        if(p_iter <= lp_mid_pos && lp_mid_pos <= (p_iter + EGG_IDXBOUGHRD_SZ(p_iter)))
+        if((size_t)p_iter <= (size_t)lp_mid_pos && (size_t)lp_mid_pos <= (size_t)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter)))
         {
             lp_mid_rd = p_iter;
             break;
         }
-        p_iter = (char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter);
+        p_iter = (eggIndexBoughRd_t*)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter));
     }
 
-    pOrgNd->useSz = (long)lp_mid_rd - lp_tmp_buf + sizeof(eggIndexBoughNd_t);
+    pOrgNd->useSz = (size_t)lp_mid_rd - (size_t)lp_tmp_buf + sizeof(eggIndexBoughNd_t);
     memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexBoughNd_t));
-    pNewNd->useSz = lp_tmp_buf + n_tmp_sz - ((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd)) +sizeof(eggIndexBoughNd_t);
+    pNewNd->useSz =  (size_t)lp_tmp_buf + n_tmp_sz -  (size_t)((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd)) +sizeof(eggIndexBoughNd_t);
     memcpy(pNewNd + 1, ((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd)), pNewNd->useSz - sizeof(eggIndexBoughNd_t));
     
     pNewNd->rchild = pOrgNd->rchild;
@@ -343,7 +279,7 @@ eggIndexBoughRd_t* eggIndexBoughNd_split_withPos(eggIndexBoughNd_t* pOrgNd, eggI
      uint32_t n_tmp_sz = n_old_sz + EGG_IDXBOUGHRD_SZ(pRd);
      char* lp_tmp_buf = (char*)malloc(n_tmp_sz);
 
-     uint32_t n_front_half_sz = (uint32_t)(pInsertPos - pOrgNd) - sizeof(eggIndexBoughNd_t);
+     uint32_t n_front_half_sz = (uint32_t)((size_t)pInsertPos -  (size_t)pOrgNd) - sizeof(eggIndexBoughNd_t);
     
     memcpy(lp_tmp_buf, pOrgNd + 1, n_front_half_sz);
     memcpy(lp_tmp_buf + n_front_half_sz, pRd, EGG_IDXBOUGHRD_SZ(pRd));
@@ -351,21 +287,21 @@ eggIndexBoughRd_t* eggIndexBoughNd_split_withPos(eggIndexBoughNd_t* pOrgNd, eggI
     
     char* lp_mid_pos = lp_tmp_buf + n_tmp_sz/2;
     eggIndexBoughRd_t* lp_mid_rd = EGG_NULL;
-    p_iter = lp_tmp_buf;
+    eggIndexBoughRd_t* p_iter = (eggIndexBoughRd_t*)lp_tmp_buf;
 
-    while(p_iter != (lp_tmp_buf + n_tmp_sz))
+    while((size_t)p_iter != ((size_t)lp_tmp_buf + n_tmp_sz))
     {
-        if(p_iter <= lp_mid_pos && lp_mid_pos <= (p_iter + EGG_IDXBOUGHRD_SZ(p_iter)))
+        if((size_t)p_iter <= (size_t)lp_mid_pos && (size_t)lp_mid_pos <= (size_t)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter)))
         {
             lp_mid_rd = p_iter;
             break;
         }
-        p_iter = (char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter);
+        p_iter = (eggIndexBoughRd_t*)((char*)p_iter + EGG_IDXBOUGHRD_SZ(p_iter));
     }
     
-    pOrgNd->useSz = (long)lp_mid_rd - lp_tmp_buf + sizeof(eggIndexBoughNd_t);
+    pOrgNd->useSz = (size_t)lp_mid_rd - (size_t)lp_tmp_buf + sizeof(eggIndexBoughNd_t);
     memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexBoughNd_t));
-    pNewNd->useSz = lp_tmp_buf + n_tmp_sz - ((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd))  + sizeof(eggIndexBoughNd_t);
+    pNewNd->useSz = (size_t)lp_tmp_buf + n_tmp_sz - (size_t)((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd))  + sizeof(eggIndexBoughNd_t);
     memcpy(pNewNd + 1, ((char*)lp_mid_rd + EGG_IDXBOUGHRD_SZ(lp_mid_rd)), pNewNd->useSz - sizeof(eggIndexBoughNd_t));
 
     
@@ -388,19 +324,18 @@ eggIndexLeafNd_t* eggIndexLeafNd_init(void* addr)
     eggIndexLeafNd_t* p_nd = (eggIndexLeafNd_t*)addr;
     p_nd->ty = EGG_IDX_LEAF_ND;
     p_nd->useSz = sizeof(eggIndexLeafNd_t);
-    p_nd->pre = 0;
     p_nd->next = 0;
     return p_nd;
 }
 
 
-int eggIndexLeafNd_find(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, char** pos, fnCmp fn)
+int eggIndexLeafNd_find(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, char** pos, INDEXRDCMP fn)
 {
     if(!pNd || !pRd)
     {
         return 0;
     }
-    eggIndexLeafRd_t* p_iter = pNd + 1;
+    eggIndexLeafRd_t* p_iter = (eggIndexLeafRd_t*)(pNd + 1);
     int n_find_ret = 0;
     void* p_rd_tail = (char*)pNd + pNd->useSz;
     while(p_iter != p_rd_tail)
@@ -408,7 +343,7 @@ int eggIndexLeafNd_find(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, char** pos
         int n_cmp_ret = fn(p_iter, pRd);
         if (n_cmp_ret == 1)
         {
-            p_iter = (char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter);
+            p_iter = (eggIndexLeafRd_t*)((char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter));
         }
         else if (n_cmp_ret == -1)
         {
@@ -421,12 +356,12 @@ int eggIndexLeafNd_find(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, char** pos
         }
     }
     
-    *pos = p_iter;
+    *pos = (void*)p_iter;
     return n_find_ret;
 }
 
 
-int eggIndexLeafNd_insert(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, fnCmp fn)
+int eggIndexLeafNd_insert(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, INDEXRDCMP fn)
 {
     if(!pNd || !pRd || EGG_IDXLEAFND_IS_FULL(pNd, pRd))
     {
@@ -434,13 +369,13 @@ int eggIndexLeafNd_insert(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, fnCmp fn
     }
 
     eggIndexLeafRd_t* p_insert_pos = EGG_NULL;
-    int n_find_ret = eggIndexLeafNd_find(pNd, pRd, &p_insert_pos, fn);
+    int n_find_ret = eggIndexLeafNd_find(pNd, pRd, (char**)&p_insert_pos, fn);
     if(!n_find_ret)
     {
         void* p_rd_tail = (char*)pNd + pNd->useSz;
         if(p_insert_pos != p_rd_tail)
         {
-            size_t n_move_size = p_rd_tail - p_insert_pos;
+            size_t n_move_size = (size_t)p_rd_tail - (size_t)p_insert_pos;
             memmove((char*)p_insert_pos + EGG_IDXLEAFRD_SZ(pRd), p_insert_pos, n_move_size);
         }
         memcpy(p_insert_pos, pRd, EGG_IDXLEAFRD_SZ(pRd));
@@ -468,7 +403,7 @@ int eggIndexLeafNd_insert_withPos(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, 
     void* p_rd_tail = (char*)pNd + pNd->useSz;
     if(p_insert_pos != p_rd_tail)
     {
-        size_t n_move_size = p_rd_tail - p_insert_pos;
+        size_t n_move_size = (size_t)p_rd_tail - (size_t)p_insert_pos;
         memmove((char*)p_insert_pos + EGG_IDXLEAFRD_SZ(pRd), p_insert_pos, n_move_size);
     }
     memcpy(p_insert_pos, pRd, EGG_IDXLEAFRD_SZ(pRd));
@@ -484,7 +419,7 @@ eggIndexLeafRd_t* eggIndexLeafNd_split_withPos(eggIndexLeafNd_t* pOrgNd, eggInde
     uint32_t n_tmp_sz = n_old_sz + EGG_IDXLEAFRD_SZ(pRd);
     char* lp_tmp_buf = (char*)malloc(n_tmp_sz);
     
-    uint32_t n_front_half_sz = (uint32_t)(pInsertPos - pOrgNd) - sizeof(eggIndexLeafNd_t);
+    uint32_t n_front_half_sz = (uint32_t)((size_t)pInsertPos - (size_t)pOrgNd) - sizeof(eggIndexLeafNd_t);
     
     memcpy(lp_tmp_buf, pOrgNd + 1, n_front_half_sz);
     memcpy(lp_tmp_buf + n_front_half_sz, pRd, EGG_IDXLEAFRD_SZ(pRd));
@@ -494,33 +429,33 @@ eggIndexLeafRd_t* eggIndexLeafNd_split_withPos(eggIndexLeafNd_t* pOrgNd, eggInde
 
     char* lp_mid_pos = lp_tmp_buf + n_tmp_sz/2;
     eggIndexLeafRd_t* lp_mid_rd = EGG_NULL;
-    p_iter = lp_tmp_buf;
+    eggIndexLeafRd_t* p_iter = (eggIndexLeafRd_t*)lp_tmp_buf;
 
-    while(p_iter != (lp_tmp_buf + pOrgNd->useSz))
+    while((size_t)p_iter != (size_t)(lp_tmp_buf + pOrgNd->useSz))
     {
-        if(p_iter <= lp_mid_pos && lp_mid_pos <= (p_iter + EGG_IDXLEAFRD_SZ(p_iter)))
+        if((size_t)p_iter <= (size_t)lp_mid_pos && (size_t)lp_mid_pos <= (size_t)((char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter)))
         {
             lp_mid_rd = p_iter;
             break;
         }
-        p_iter = (char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter);
+        p_iter = (eggIndexLeafRd_t*)((char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter));
     }    
-    if((lp_mid_pos - lp_mid_rd) < (lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - lp_mid_pos))
+    if(((size_t)lp_mid_pos - (size_t)lp_mid_rd) < ((size_t)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - (size_t)lp_mid_pos))
     {
         //copy to new node
-         pOrgNd->useSz = (long)lp_mid_rd - lp_tmp_buf + sizeof(eggIndexLeafNd_t);
+         pOrgNd->useSz = (size_t)lp_mid_rd - (size_t)lp_tmp_buf + sizeof(eggIndexLeafNd_t);
         memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexLeafNd_t));
-        pNewNd->useSz = lp_tmp_buf + n_tmp_sz - (long)lp_mid_rd + sizeof(eggIndexLeafNd_t);
+        pNewNd->useSz = (size_t)lp_tmp_buf + n_tmp_sz - (size_t)lp_mid_rd + sizeof(eggIndexLeafNd_t);
         memcpy(pNewNd + 1, lp_mid_rd, pNewNd->useSz - sizeof(eggIndexLeafNd_t));
     }
     else
     {
 
         //cpoy to old node
-        pOrgNd->useSz = (long)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - lp_tmp_buf + sizeof(eggIndexLeafNd_t);
+        pOrgNd->useSz = (size_t)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - (size_t)lp_tmp_buf + sizeof(eggIndexLeafNd_t);
         memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexLeafNd_t));
-        pNewNd->useSz = lp_tmp_buf + n_tmp_sz - (long)lp_mid_rd - EGG_IDXLEAFRD_SZ(lp_mid_rd) + sizeof(eggIndexLeafNd_t);
-        lp_mid_rd = (char*)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd);
+        pNewNd->useSz = (size_t)lp_tmp_buf + n_tmp_sz - (size_t)lp_mid_rd - EGG_IDXLEAFRD_SZ(lp_mid_rd) + sizeof(eggIndexLeafNd_t);
+        lp_mid_rd = (eggIndexLeafRd_t*)((char*)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd));
         memcpy(pNewNd + 1, lp_mid_rd, pNewNd->useSz - sizeof(eggIndexLeafNd_t));
 
     }
@@ -534,18 +469,18 @@ eggIndexLeafRd_t* eggIndexLeafNd_split_withPos(eggIndexLeafNd_t* pOrgNd, eggInde
 
 
 
-eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_t* pNewNd, eggIndexLeafRd_t* pRd, fnCmp fn)
+eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_t* pNewNd, eggIndexLeafRd_t* pRd, INDEXRDCMP fn)
 {
      uint32_t n_old_sz = pOrgNd->useSz - sizeof(eggIndexLeafNd_t) ;
     uint32_t n_tmp_sz = n_old_sz + EGG_IDXLEAFRD_SZ(pRd);
     char* lp_tmp_buf = (char*)malloc(n_tmp_sz);
     memcpy(lp_tmp_buf, pOrgNd + 1, n_old_sz);  
-    eggIndexLeafRd_t* p_iter = lp_tmp_buf;
+    eggIndexLeafRd_t* p_iter = (eggIndexLeafRd_t*)lp_tmp_buf;
     
     while(1)
     {
         
-        if(p_iter == (lp_tmp_buf + pOrgNd->useSz))
+        if((size_t)p_iter == ((size_t)lp_tmp_buf + pOrgNd->useSz))
         {
             memcpy(p_iter, pRd, EGG_IDXLEAFRD_SZ(pRd));
             break;
@@ -554,11 +489,11 @@ eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_
         if (n_cmp_ret == 1)
         {
            
-            p_iter = (char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter);
+            p_iter = (eggIndexLeafRd_t*)((char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter));
         }
         else if (n_cmp_ret == -1)
         {
-            size_t n_move_size = lp_tmp_buf +  n_old_sz - p_iter;
+            size_t n_move_size = (size_t)lp_tmp_buf +  (size_t)n_old_sz - (size_t)p_iter;
             memmove((char*)p_iter + EGG_IDXLEAFRD_SZ(pRd), p_iter, n_move_size);
             memcpy(p_iter, pRd, EGG_IDXLEAFRD_SZ(pRd));
             break;
@@ -574,33 +509,33 @@ eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_
 
     char* lp_mid_pos = lp_tmp_buf + n_tmp_sz/2;
     eggIndexLeafRd_t* lp_mid_rd = p_iter;
-    p_iter = lp_tmp_buf;
+    p_iter = (eggIndexLeafRd_t*)lp_tmp_buf;
 
-    while(p_iter != (lp_tmp_buf + n_old_sz))
+    while((size_t)p_iter != ((size_t)lp_tmp_buf + n_old_sz))
     {
-        if(p_iter <= lp_mid_pos && lp_mid_pos <= (p_iter + EGG_IDXLEAFRD_SZ(p_iter)))
+        if((size_t)p_iter <= (size_t)lp_mid_pos && (size_t)lp_mid_pos <= ((size_t)p_iter + EGG_IDXLEAFRD_SZ(p_iter)))
         {
             lp_mid_rd = p_iter;
             break;
         }
-        p_iter = (char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter);
+        p_iter = (eggIndexLeafRd_t*)((char*)p_iter + EGG_IDXLEAFRD_SZ(p_iter));
     }    
-    if((lp_mid_pos - lp_mid_rd) < (lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - lp_mid_pos))
+    if(((size_t)lp_mid_pos - (size_t)lp_mid_rd) < ((size_t)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - (size_t)lp_mid_pos))
     {
         //copy to new node
-         pOrgNd->useSz = (long)lp_mid_rd - (long)lp_tmp_buf + sizeof(eggIndexLeafNd_t);
+         pOrgNd->useSz = (size_t)lp_mid_rd - (size_t)lp_tmp_buf + sizeof(eggIndexLeafNd_t);
         memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexLeafNd_t));
-        pNewNd->useSz = ((long)lp_tmp_buf + n_tmp_sz - (long)lp_mid_rd + sizeof(eggIndexLeafNd_t);
+        pNewNd->useSz = (size_t)lp_tmp_buf + n_tmp_sz - (size_t)lp_mid_rd + sizeof(eggIndexLeafNd_t);
         memcpy(pNewNd + 1, lp_mid_rd, pNewNd->useSz - sizeof(eggIndexLeafNd_t));
     }
     else
     {
 
         //cpoy old node
-         pOrgNd->useSz = (long)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - lp_tmp_buf + sizeof(eggIndexLeafNd_t);
+         pOrgNd->useSz = (size_t)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd) - (size_t)lp_tmp_buf + sizeof(eggIndexLeafNd_t);
         memcpy(pOrgNd + 1, lp_tmp_buf, pOrgNd->useSz - sizeof(eggIndexLeafNd_t));
-         pNewNd->useSz = lp_tmp_buf + n_tmp_sz - (long)lp_mid_rd - EGG_IDXLEAFRD_SZ(lp_mid_rd) + sizeof(eggIndexLeafNd_t);
-        lp_mid_rd = (char*)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd);
+         pNewNd->useSz = (size_t)lp_tmp_buf + n_tmp_sz - (size_t)lp_mid_rd - EGG_IDXLEAFRD_SZ(lp_mid_rd) + sizeof(eggIndexLeafNd_t);
+         lp_mid_rd = (eggIndexLeafRd_t*)((char*)lp_mid_rd + EGG_IDXLEAFRD_SZ(lp_mid_rd));
         memcpy(pNewNd + 1, lp_mid_rd, pNewNd->useSz - sizeof(eggIndexLeafNd_t));
 
     }
@@ -614,53 +549,53 @@ eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_
 
 
 
-eggIndexView_t* eggIndexView_new(HVIEWSTREAM hViewStream, eggIndexInfo_t* pInfo)
+eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo)
 {
-    if(!vf_handle)
+    if(!hViewStream)
     {
         return EGG_NULL; 
     }
 
-    eggIndexView_t* lp_index_view = (eggIndexView_t*)malloc( sizeof(eggIndexView_t) );
-    lp_index_view->hViewStream = hViewStream;
+    eggIndex_t* lp_index = (eggIndex_t*)malloc( sizeof(eggIndex_t) );
+    lp_index->hViewStream = hViewStream;
     
-    memcpy(&lp_index_view->info, pInfo, sizeof(eggIndexInfo_t));
+    memcpy(&lp_index->info, pInfo, sizeof(eggIndexInf_t));
 
-    return lp_index_view;
+    return lp_index;
 }
 
-int eggIndexView_delete(eggIndexView_t* lp_index_view)
+int eggIndex_delete(eggIndex_t* lp_index)
 {
-    if(!lp_index_view)
+    if(!lp_index)
     {
         return EGG_FALSE; 
     }
     
-    ViewStream_delete(lp_index_view->hViewStream);
-    free(lp_index_view);
+    ViewStream_delete(lp_index->hViewStream);
+    free(lp_index);
     
     return EGG_TRUE;
 }
 
-eggIndexLeafRd_t* eggIndexView_find(eggIndexView_t* hIndexView, char* key, uint16_t kSz)
+eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz)
 {
-    if(!hIndexView || !key)
+    if(!hIndex || !key)
     {
         return EGG_FALSE;
     }
 
-    if(hIndexView->info.root == EGG_INVALID_PAGENO)
+    if(hIndex->info.root == EGG_INVALID_PAGENO)
     {
         return EGG_FALSE;
     }
-    HVIEWSTREAM hViewStream   = hIndexView->hViewStream;
+    HVIEWSTREAM hViewStream   = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
     eggIndexLeafRd_t* lp_ret_rd = EGG_NULL;
 
     eggIndexNd_t* p_com_nd = malloc(n_node_sz);
 
-    pageno_t n_iter_no = hIndexView->info.root;
+    pageno_t n_iter_no = hIndex->info.root;
 
     ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
     
@@ -669,11 +604,11 @@ eggIndexLeafRd_t* eggIndexView_find(eggIndexView_t* hIndexView, char* key, uint1
     {
         eggIndexBoughRd_t* lp_iter_rd = EGG_NULL;
         eggIndexBoughRd_t* lp_bough_rd = eggIndexBoughRd_new(key, kSz);
-        rdCmp = BoughRdCmp;
+        rdCmp = rdcmp_bough_str;
                 
         while(1)
         {
-            if(eggIndexBoughNd_find((eggIndexBoughNd_t*)(p_com_nd), lp_bough_rd, &lp_iter_rd, rdCmp) == 1)
+            if(eggIndexBoughNd_find((eggIndexBoughNd_t*)(p_com_nd), lp_bough_rd, (char**)&lp_iter_rd, rdCmp) == 1)
             {
                 //find key
                 n_iter_no = lp_iter_rd->host;
@@ -681,7 +616,7 @@ eggIndexLeafRd_t* eggIndexView_find(eggIndexView_t* hIndexView, char* key, uint1
             else
             {
                 //no find key
-                n_iter_no = EGG_IDXND_TAILPOS(p_com_nd) == lp_iter_rd ?
+                n_iter_no = (size_t)EGG_IDXND_TAILPOS(p_com_nd) == (size_t)lp_iter_rd ?
                     ((eggIndexBoughNd_t*)(p_com_nd))->rchild :lp_iter_rd->lchild;   
             }
 
@@ -696,9 +631,9 @@ eggIndexLeafRd_t* eggIndexView_find(eggIndexView_t* hIndexView, char* key, uint1
     //search leaf
     eggIndexLeafRd_t* lp_iter_rd = EGG_NULL;
     eggIndexLeafRd_t* lp_leaf_rd = eggIndexLeafRd_new(key, kSz, EGG_NULL, EGG_NULL);
-    rdCmp = LeafRdCmp;
+    rdCmp = rdcmp_leaf_str;
 
-    if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_leaf_rd, &lp_iter_rd, rdCmp) == 1)
+    if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_leaf_rd, (char**)&lp_iter_rd, rdCmp) == 1)
     {
         //find key
         lp_ret_rd = (eggIndexLeafRd_t*)malloc(EGG_IDXLEAFRD_SZ(lp_iter_rd));
@@ -715,24 +650,23 @@ eggIndexLeafRd_t* eggIndexView_find(eggIndexView_t* hIndexView, char* key, uint1
 
 
 
-int eggIndexView_add(eggIndexView_t* hIndexView, char* key, uint16_t kSz, char* val, uint32_t vSz)
+int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_t vSz)
 {
-    if(!hIndexView || !key || !val)
+    if(!hIndex || !key || !val)
     {
         return EGG_FALSE;
     }
 
-    if(hIndexView->info.root == EGG_INVALID_PAGENO)
+    if(hIndex->info.root == EGG_INVALID_PAGENO)
     {
         return EGG_FALSE;
     }
-    HVIEWSTREAM hViewStream  = hIndexView->hViewStream;
+    HVIEWSTREAM hViewStream  = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
-    eggIndexLeafRd_t* lp_ret_rd = EGG_NULL;
 
     eggIndexNd_t* p_com_nd = malloc(n_node_sz);
-    pageno_t n_iter_no = hIndexView->info.root;
+    pageno_t n_iter_no = hIndex->info.root;
     ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
 
     eggIndexNdList_t* p_nd_head = eggIndexNdList_push(EGG_NULL, n_iter_no, p_com_nd, EGG_NULL);
@@ -742,11 +676,11 @@ int eggIndexView_add(eggIndexView_t* hIndexView, char* key, uint16_t kSz, char* 
     {
         eggIndexBoughRd_t* lp_iter_rd = EGG_NULL;
         eggIndexBoughRd_t* lp_bough_rd = eggIndexBoughRd_new(key, kSz);
-        rdCmp = BoughRdCmp;
+        rdCmp = rdcmp_bough_str;
                 
         while(1)
         {
-            if(eggIndexBoughNd_find((eggIndexBoughNd_t*)(p_com_nd), lp_bough_rd, &lp_iter_rd, rdCmp) == 1)
+            if(eggIndexBoughNd_find((eggIndexBoughNd_t*)(p_com_nd), lp_bough_rd, (char**)&lp_iter_rd, rdCmp) == 1)
             {
                 //find same key, return !
                 eggIndexBoughRd_delete(lp_bough_rd);
@@ -754,7 +688,7 @@ int eggIndexView_add(eggIndexView_t* hIndexView, char* key, uint16_t kSz, char* 
                 return EGG_FALSE;
             }
                 //no find key
-            n_iter_no = EGG_IDXND_TAILPOS(p_com_nd) == lp_iter_rd ?
+            n_iter_no = (size_t)EGG_IDXND_TAILPOS(p_com_nd) == (size_t)lp_iter_rd ?
                 ((eggIndexBoughNd_t*)(p_com_nd))->rchild :lp_iter_rd->lchild;   
 
             p_com_nd = malloc(n_node_sz);
@@ -772,9 +706,9 @@ int eggIndexView_add(eggIndexView_t* hIndexView, char* key, uint16_t kSz, char* 
     eggIndexRd_t* lp_insert_pos = EGG_NULL;
     
 
-    rdCmp = LeafRdCmp;
+    rdCmp = rdcmp_leaf_str;
 
-    if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_insert_rd, &lp_insert_pos, rdCmp) == 1)
+    if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_insert_rd, (char**)&lp_insert_pos, rdCmp) == 1)
     {
         //find same key, return !
         eggIndexLeafRd_delete(lp_insert_rd);
@@ -782,26 +716,27 @@ int eggIndexView_add(eggIndexView_t* hIndexView, char* key, uint16_t kSz, char* 
         return EGG_FALSE;
     }
 
+    eggIndexNdList_t* p_nd_iter = p_nd_head;
     pageno_t n_new_pageno  = 0;
     do
     {
-         lp_insert_rd = eggIndex_split(hIndexView, p_nd_iter,  lp_insert_rd, &n_new_pageno);
+         lp_insert_rd = eggIndex_split(hIndex, p_nd_iter,  lp_insert_rd, &n_new_pageno);
         if(lp_insert_rd == EGG_NULL)
             break;
-        
+        p_nd_iter = p_nd_iter->next;
     }while(1);
 
     return EGG_TRUE;
 }
 
-eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdList,   eggIndexRd_t* pInsertRd, pageno_t* p_new_pageno)
+eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eggIndexRd_t* pInsertRd, pageno_t* p_new_pageno)
 {
-    if(!hIndexView || !pNdList || !pInsertRd )
+    if(!hIndex || !pNdList || !pInsertRd )
     {
         return EGG_NULL;
     }
 
-    HVIEWSTREAM hViewStream = hIndexView->hViewStream;
+    HVIEWSTREAM hViewStream = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
     eggIndexRd_t* lp_ret_rd = EGG_NULL;
@@ -810,20 +745,20 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
     {
          eggIndexBoughNd_t* p_root_nd = (eggIndexBoughNd_t*)eggIndexBoughNd_init(malloc(n_node_sz));
 
-         p_root_nd->useSz += EGG_IDXBOUGHRD_SZ(p_insert_rd);
-         memcpy(p_root_nd + 1, p_insert_rd, EGG_IDXBOUGHRD_SZ(p_insert_rd));
+         p_root_nd->useSz += EGG_IDXBOUGHRD_SZ(pInsertRd);
+         memcpy(p_root_nd + 1, pInsertRd, EGG_IDXBOUGHRD_SZ(pInsertRd));
          p_root_nd->rchild = *p_new_pageno;
 
-         hIndexView->info.root =  ViewStream_write(hViewStream, p_root_nd, n_node_sz);
+         hIndex->info.root =  ViewStream_write(hViewStream, p_root_nd, n_node_sz);
               
          return EGG_NULL;
     }
         
     if(pNdList->nd->ty == EGG_IDX_LEAF_ND)
     {
-         fnCmp functionCmp = fnRdCmp;
-
-        eggIndexLeafNd_t* p_old_nd = pNdList->nd;
+        
+        rdCmp = rdcmp_leaf_str;
+        eggIndexLeafNd_t* p_old_nd = (eggIndexLeafNd_t*)pNdList->nd;
         pageno_t n_old_pageno = pNdList->pageno;
 
         eggIndexLeafRd_t* p_insert_rd = pInsertRd;
@@ -835,11 +770,11 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
 
 //split old nd             
              eggIndexBoughRd_t* p_father_insert_rd = eggIndexRd_leaf_to_bough(eggIndexLeafNd_split(p_old_nd, p_new_nd,
-             p_insert_rd,  fnRdCmp));
+             p_insert_rd,  rdCmp));
 
 //update father insert Rd 
              p_father_insert_rd->lchild = n_old_pageno;
-             p_father_insert_rd->host = *p_new_page;
+             p_father_insert_rd->host = *p_new_pageno;
 
 //update leaf list pageno
              p_new_nd->next = p_old_nd->next;
@@ -853,17 +788,17 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
         }
         else
         {
-             eggIndexLeafNd_insert(p_old_nd,  p_insert_rd, fnRdCmp);
+             eggIndexLeafNd_insert(p_old_nd,  p_insert_rd, rdCmp);
              
-             lp_ret_rd = EGG_NULL
+             lp_ret_rd = EGG_NULL;
         }
     }
     else
     {
         // the same with leaf node
-         fnCmp functionCmp = fnBoughRdCmp;
+        rdCmp = rdcmp_bough_str;
 
-        eggIndexBoughNd_t* p_old_nd = pNdList->nd;
+        eggIndexBoughNd_t* p_old_nd = (eggIndexBoughNd_t*)pNdList->nd;
         pageno_t n_old_pageno = pNdList->pageno;
 
         eggIndexBoughRd_t* p_insert_rd = pInsertRd;
@@ -875,8 +810,8 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
 
 //split old nd             
              eggIndexBoughRd_t* p_insert_pos = EGG_NULL;
-             eggIndexBoughNd_find(p_old_nd, p_insert_rd, &p_insert_pos, fnBoughRdCmp);
-             if(EGG_IDXND_TAILPOS(p_old_nd) == p_insert_pos)
+             eggIndexBoughNd_find(p_old_nd, p_insert_rd, (char**)&p_insert_pos, rdCmp);
+             if((size_t)EGG_IDXND_TAILPOS(p_old_nd) == (size_t)p_insert_pos)
              {
                   p_old_nd->rchild = * p_new_pageno;
              }
@@ -901,8 +836,8 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
         else
         {
              eggIndexBoughRd_t* p_insert_pos = EGG_NULL;
-             eggIndexBoughNd_find(p_old_nd, p_insert_rd, &p_insert_pos, fnBoughRdCmp);
-             if(EGG_IDXND_TAILPOS(p_old_nd) == p_insert_pos)
+             eggIndexBoughNd_find(p_old_nd, p_insert_rd, (char**)&p_insert_pos, rdCmp);
+             if((size_t)EGG_IDXND_TAILPOS(p_old_nd) == (size_t)p_insert_pos)
              {
                   p_old_nd->rchild = * p_new_pageno;
              }
@@ -913,11 +848,9 @@ eggIndexRd_t* eggIndex_split(eggIndexView_t* hIndexView, eggIndexNdList_t* pNdLi
 
              eggIndexBoughNd_insert_withPos(p_old_nd,  p_insert_rd, p_insert_pos);
              
-             lp_ret_rd = EGG_NULL
+             lp_ret_rd = EGG_NULL;
         }
     
 
-    }
-
-    
+    }    
 }
