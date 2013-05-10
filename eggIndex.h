@@ -47,7 +47,7 @@ typedef struct eggIndexLeafNd
 typedef struct eggIndexInf
 {
     pageno_t root;
-    int nodeSz;
+    pageno_t leaf;
     type_t rdtype;
     size32_t rdmaxSz;
 }eggIndexInf_t;
@@ -67,7 +67,8 @@ typedef struct eggIndexNdList
 }eggIndexNdList_t;
 #define EGG_INVALID_PAGENO (0)
 
-#define EGG_IDXNDSZ (16*1024)
+#define EGG_IDXNDSZ (100)
+#define EGG_IDXRDMAXSZ (EGG_IDXNDSZ/3)
 #define EGG_IDX_BOUGH_ND 1
 #define EGG_IDX_LEAF_ND  2
 
@@ -114,6 +115,8 @@ int eggIndexLeafRd_delete(eggIndexLeafRd_t* pRd);
 
 eggIndexBoughNd_t* eggIndexBoughNd_init(void* addr);
 
+int eggIndexBoughNd_destroy(eggIndexBoughNd_t* pBoughNd);
+
 int eggIndexBoughNd_find(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, char** pos, INDEXRDCMP fn);
 
 int eggIndexBoughNd_insert(eggIndexBoughNd_t* pNd, eggIndexBoughRd_t* pRd, INDEXRDCMP fn);
@@ -126,6 +129,9 @@ eggIndexBoughRd_t* eggIndexBoughNd_split_withPos(eggIndexBoughNd_t* pOrgNd, eggI
 
 eggIndexLeafNd_t* eggIndexLeafNd_init(void* addr);
 
+int eggIndexLeafNd_destroy(eggIndexLeafNd_t* pLeafNd);
+
+
 int eggIndexLeafNd_find(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, char** pos, INDEXRDCMP fn);
 
 int eggIndexLeafNd_insert(eggIndexLeafNd_t* pNd, eggIndexLeafRd_t* pRd, INDEXRDCMP fn);
@@ -136,10 +142,16 @@ eggIndexLeafRd_t* eggIndexLeafNd_split_withPos(eggIndexLeafNd_t* pOrgNd, eggInde
 
 eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_t* pNewNd, eggIndexLeafRd_t* pRd, INDEXRDCMP fn);
 
+int eggIndexNd_destroy(eggIndexNd_t* pNd);
+
 eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo);
+
+int eggIndex_delete(eggIndex_t* lp_index);
 
 eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz);
 
 int eggIndex_add(eggIndex_t* hIndexView, char* key, uint16_t kSz, char* val, uint32_t vSz);
+
+int eggIndex_leafNd_result(eggIndex_t* hIndex);
 
 eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eggIndexRd_t* pInsertRd, pageno_t* p_new_pageno);
