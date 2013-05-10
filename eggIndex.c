@@ -56,11 +56,11 @@ int eggIndexNdList_free(eggIndexNdList_t* pNdList)
 {
     while(pNdList)
     {
-        free(pNdList->nd);
+        //free(pNdList->nd);
         eggIndexNdList_t* pTmpNdList =  pNdList;
         pNdList = pNdList->next;
         
-//        eggIndexNd_destroy(pTmpNdList->nd);
+        eggIndexNd_destroy(pTmpNdList->nd);
         free(pTmpNdList);
     }
     return EGG_TRUE;
