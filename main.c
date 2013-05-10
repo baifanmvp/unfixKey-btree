@@ -16,7 +16,7 @@ int main(int argc, char** argv)
     int cnt = atoi(argv[1]);
     while(i < cnt)
     {
-        int randnum = 100000-i;//rand()%10000;
+        int randnum = rand()%1000000;
         memset(num, 0, 10);
         sprintf(num, "%d", randnum);
         //  printf("num : [%s]\n", num);

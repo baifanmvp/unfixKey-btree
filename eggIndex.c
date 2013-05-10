@@ -637,6 +637,8 @@ eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo)
         eggIndexLeafNd_t* p_leaf_nd = eggIndexLeafNd_init(malloc(n_node_sz));
         lp_index->info.root =  ViewStream_write(hViewStream, p_leaf_nd, n_node_sz);
         lp_index->info.leaf = lp_index->info.root;
+        
+        eggIndexLeafNd_destroy(p_leaf_nd);
     }
     
     return lp_index;
@@ -808,6 +810,8 @@ int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_
             break;
         p_nd_iter = p_nd_iter->next;
     }while(1);
+    
+    eggIndexNdList_free(p_nd_head);
 
     return EGG_TRUE;
 }
@@ -863,7 +867,9 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
          p_root_nd->rchild = *p_new_pageno;
 
          hIndex->info.root =  ViewStream_write(hViewStream, p_root_nd, n_node_sz);
-              
+
+         eggIndexBoughNd_destroy(p_root_nd);
+         free(pInsertRd);
          return EGG_NULL;
     }
         
@@ -897,6 +903,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
             ViewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
             ViewStream_update(hViewStream, p_new_nd, n_node_sz, * p_new_pageno);
 
+            eggIndexLeafNd_destroy(p_new_nd);
             lp_ret_rd = p_father_insert_rd;
         }
         else
@@ -944,6 +951,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
              *p_new_pageno =  ViewStream_write(hViewStream, p_new_nd, n_node_sz);
 
              
+             eggIndexBoughNd_destroy(p_new_nd);
              lp_ret_rd = p_father_insert_rd;
         }
         else
@@ -968,5 +976,8 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
     
 
     }
+    
+    free(pInsertRd);
+
     return lp_ret_rd;
 }
