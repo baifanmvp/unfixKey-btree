@@ -25,19 +25,19 @@ int main(int argc, char** argv)
     }
 
     //  eggIndex_leafNd_result(p_index);
-    printf("root : %lld  leaf : %lld \n", p_index->info.root, p_index->info.leaf);
+/*     printf("root : %lld  leaf : %lld \n", p_index->info.root, p_index->info.leaf); */
 
-    printf("\n===============================\n");
-    i=0;
-    while(i < cnt)
-    {
-        int randnum = 100000-i;//rand()%10000;
-        memset(num, 0, 10);
-        sprintf(num, "%d", randnum);
-//        printf("num : [%s]\n", num);
-        eggIndex_add(p_index, num, 10, &off, sizeof(off));
-        i++;
-    }
+/*     printf("\n===============================\n"); */
+/*     i=0; */
+/*     while(i < cnt) */
+/*     { */
+/*         int randnum = 100000-i;//rand()%10000; */
+/*         memset(num, 0, 10); */
+/*         sprintf(num, "%d", randnum); */
+/* //        printf("num : [%s]\n", num); */
+/*         eggIndex_add(p_index, num, 10, &off, sizeof(off)); */
+/*         i++; */
+/*     } */
 
     
     eggIndex_delete(p_index);
