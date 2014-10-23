@@ -1,5 +1,5 @@
+#include <string.h>
 #include "eggIndex.h"
-
 int rdcmp_bough_str(eggIndexBoughRd_t* pSrcRd, eggIndexBoughRd_t* pDestRd)
 {
     void* p_src_key = pSrcRd + 1;
@@ -571,23 +571,23 @@ int eggIndexNd_show_record(eggIndexNd_t* pNd)
     printf("\n***********************************\n");
     if(pNd->ty == EGG_IDX_BOUGH_ND)
     {
-        eggIndexBoughRd_t* lp_bough_rd = ((eggIndexBoughNd_t*)pNd) + 1;
+        eggIndexBoughRd_t* lp_bough_rd = (eggIndexBoughRd_t*)((eggIndexBoughNd_t*)pNd + 1);
         while((size_t)lp_bough_rd != (size_t)EGG_IDXND_TAILPOS(pNd))
         {
-            printf("[%d] ", lp_bough_rd->lchild);
-            printf("(%s) ", lp_bough_rd+1);
-            lp_bough_rd = (char*)lp_bough_rd + EGG_IDXBOUGHRD_SZ(lp_bough_rd);
+            printf("[%lld] ", lp_bough_rd->lchild);
+            printf("(%s) ", (char*)(lp_bough_rd+1));
+            lp_bough_rd = (eggIndexBoughRd_t*)((char*)lp_bough_rd + EGG_IDXBOUGHRD_SZ(lp_bough_rd));
         }
-        printf("[%d] ", ((eggIndexBoughNd_t*)pNd)->rchild);
+        printf("[%lld] ", ((eggIndexBoughNd_t*)pNd)->rchild);
         
     }
     else if(pNd->ty == EGG_IDX_LEAF_ND)
     {
-        eggIndexLeafRd_t* lp_leaf_rd = ((eggIndexLeafNd_t*)pNd) + 1;
+        eggIndexLeafRd_t* lp_leaf_rd = (eggIndexLeafRd_t*)(((eggIndexLeafNd_t*)pNd) + 1);
         while((size_t)lp_leaf_rd != (size_t)EGG_IDXND_TAILPOS(pNd))
         {
-            printf("(%s) ", lp_leaf_rd+1);
-            lp_leaf_rd = (char*)lp_leaf_rd + EGG_IDXLEAFRD_SZ(lp_leaf_rd);
+            printf("(%s) ", (char*)(lp_leaf_rd + 1));
+            lp_leaf_rd = (eggIndexLeafRd_t*)((char*)lp_leaf_rd + EGG_IDXLEAFRD_SZ(lp_leaf_rd));
         }
     }
     else
@@ -619,7 +619,7 @@ int eggIndexNd_destroy(eggIndexNd_t* pNd)
 }
 
 
-eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo)
+eggIndex_t* eggIndex_new(viewStream_t* hViewStream, eggIndexInf_t* pInfo)
 {
     if(!hViewStream)
     {
@@ -635,7 +635,7 @@ eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo)
         uint32_t n_node_sz = EGG_IDXNDSZ;
 
         eggIndexLeafNd_t* p_leaf_nd = eggIndexLeafNd_init(malloc(n_node_sz));
-        lp_index->info.root =  ViewStream_write(hViewStream, p_leaf_nd, n_node_sz);
+        lp_index->info.root =  viewStream_write(hViewStream, p_leaf_nd, n_node_sz);
         lp_index->info.leaf = lp_index->info.root;
         
         eggIndexLeafNd_destroy(p_leaf_nd);
@@ -651,7 +651,7 @@ int eggIndex_delete(eggIndex_t* lp_index)
         return EGG_FALSE; 
     }
     
-    ViewStream_delete(lp_index->hViewStream);
+    viewStream_delete(lp_index->hViewStream);
     free(lp_index);
     
     return EGG_TRUE;
@@ -668,7 +668,7 @@ eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz)
     {
         return EGG_FALSE;
     }
-    HVIEWSTREAM hViewStream   = hIndex->hViewStream;
+    viewStream_t* hViewStream   = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
     eggIndexLeafRd_t* lp_ret_rd = EGG_NULL;
@@ -677,14 +677,14 @@ eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz)
 
     pageno_t n_iter_no = hIndex->info.root;
 
-    ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
+    viewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
     
 
     if(p_com_nd->ty == EGG_IDX_BOUGH_ND)
     {
         eggIndexBoughRd_t* lp_iter_rd = EGG_NULL;
         eggIndexBoughRd_t* lp_bough_rd = eggIndexBoughRd_new(key, kSz);
-        rdCmp = rdcmp_bough_str;
+        rdCmp = (INDEXRDCMP)rdcmp_bough_str;
                 
         while(1)
         {
@@ -700,7 +700,7 @@ eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz)
                     ((eggIndexBoughNd_t*)(p_com_nd))->rchild :lp_iter_rd->lchild;   
             }
 
-            ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
+            viewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
             
             if (p_com_nd->ty == EGG_IDX_LEAF_ND)
                 break;
@@ -711,7 +711,7 @@ eggIndexLeafRd_t* eggIndex_find(eggIndex_t* hIndex, char* key, uint16_t kSz)
     //search leaf
     eggIndexLeafRd_t* lp_iter_rd = EGG_NULL;
     eggIndexLeafRd_t* lp_leaf_rd = eggIndexLeafRd_new(key, kSz, EGG_NULL, EGG_NULL);
-    rdCmp = rdcmp_leaf_str;
+    rdCmp = (INDEXRDCMP)rdcmp_leaf_str;
 
     if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_leaf_rd, (char**)&lp_iter_rd, rdCmp) == 1)
     {
@@ -736,18 +736,22 @@ int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_
     {
         return EGG_FALSE;
     }
-
+    if(kSz >= EGG_IDXRDMAXSZ )
+    {
+        printf("th key is too long! invalid op\n");
+        return EGG_FALSE;
+    }
     if(hIndex->info.root == EGG_INVALID_PAGENO)
     {
         return EGG_FALSE;
     }
-    HVIEWSTREAM hViewStream  = hIndex->hViewStream;
+    viewStream_t* hViewStream  = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
 
     eggIndexNd_t* p_com_nd = malloc(n_node_sz);
     pageno_t n_iter_no = hIndex->info.root;
-    ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
+    viewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
     //eggIndexNd_show_record(p_com_nd);
 
     eggIndexNdList_t* p_nd_head = eggIndexNdList_push(EGG_NULL, n_iter_no, p_com_nd, EGG_NULL);
@@ -757,7 +761,7 @@ int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_
     {
         eggIndexBoughRd_t* lp_iter_rd = EGG_NULL;
         eggIndexBoughRd_t* lp_bough_rd = eggIndexBoughRd_new(key, kSz);
-        rdCmp = rdcmp_bough_str;
+        rdCmp = (INDEXRDCMP)rdcmp_bough_str;
                 
         while(1)
         {
@@ -774,7 +778,7 @@ int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_
                 ((eggIndexBoughNd_t*)(p_com_nd))->rchild :lp_iter_rd->lchild;   
 
             p_com_nd = malloc(n_node_sz);
-            ViewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
+            viewStream_read(hViewStream, p_com_nd, n_node_sz, n_iter_no);
             //      eggIndexNd_show_record(p_com_nd);
             
             p_nd_head = eggIndexNdList_push(p_nd_head, n_iter_no, p_com_nd, lp_iter_rd);
@@ -790,7 +794,7 @@ int eggIndex_add(eggIndex_t* hIndex, char* key, uint16_t kSz, char* val, uint32_
     eggIndexRd_t* lp_insert_pos = EGG_NULL;
     
 
-    rdCmp = rdcmp_leaf_str;
+    rdCmp = (INDEXRDCMP)rdcmp_leaf_str;
 
     if(eggIndexLeafNd_find((eggIndexLeafNd_t*)(p_com_nd), lp_insert_rd, (char**)&lp_insert_pos, rdCmp) == 1)
     {
@@ -823,7 +827,7 @@ int eggIndex_leafNd_result(eggIndex_t* hIndex)
     {
         return EGG_FALSE;
     }
-    HVIEWSTREAM hViewStream = hIndex->hViewStream;
+    viewStream_t* hViewStream = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     eggIndexLeafNd_t* p_leaf_nd = (eggIndexLeafNd_t*)malloc(n_node_sz);
     pageno_t n_iter_pageno = hIndex->info.leaf;
@@ -831,12 +835,12 @@ int eggIndex_leafNd_result(eggIndex_t* hIndex)
     while(n_iter_pageno)
     {
         //  printf(" ------ num start ------ %d\n", num);
-        ViewStream_read(hViewStream, p_leaf_nd, n_node_sz, n_iter_pageno);
+        viewStream_read(hViewStream, p_leaf_nd, n_node_sz, n_iter_pageno);
         eggIndexLeafRd_t* lp_rd = (eggIndexLeafRd_t*)(p_leaf_nd + 1);
         while((size_t)EGG_IDXND_TAILPOS(p_leaf_nd) != (size_t)lp_rd)
         {
             printf("key : [%s]\n", (char*)(lp_rd + 1));
-            lp_rd = (char*)lp_rd + EGG_IDXLEAFRD_SZ(lp_rd);
+            lp_rd = (eggIndexLeafRd_t*)((char*)lp_rd + EGG_IDXLEAFRD_SZ(lp_rd));
         }
         n_iter_pageno = p_leaf_nd->next;
         //printf(" ------ num end ------ %d\n", num);
@@ -853,7 +857,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
         return EGG_NULL;
     }
 
-    HVIEWSTREAM hViewStream = hIndex->hViewStream;
+    viewStream_t* hViewStream = hIndex->hViewStream;
     uint32_t n_node_sz = EGG_IDXNDSZ;
     INDEXRDCMP rdCmp;
     eggIndexRd_t* lp_ret_rd = EGG_NULL;
@@ -866,7 +870,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
          memcpy(p_root_nd + 1, pInsertRd, EGG_IDXBOUGHRD_SZ(pInsertRd));
          p_root_nd->rchild = *p_new_pageno;
 
-         hIndex->info.root =  ViewStream_write(hViewStream, p_root_nd, n_node_sz);
+         hIndex->info.root =  viewStream_write(hViewStream, p_root_nd, n_node_sz);
 
          eggIndexBoughNd_destroy(p_root_nd);
          free(pInsertRd);
@@ -876,7 +880,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
     if(pNdList->nd->ty == EGG_IDX_LEAF_ND)
     {
         
-        rdCmp = rdcmp_leaf_str;
+        rdCmp = (INDEXRDCMP)rdcmp_leaf_str;
         eggIndexLeafNd_t* p_old_nd = (eggIndexLeafNd_t*)pNdList->nd;
         pageno_t n_old_pageno = pNdList->pageno;
 
@@ -886,7 +890,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
         {
 //create new nd
             eggIndexLeafNd_t* p_new_nd = eggIndexLeafNd_init(malloc(n_node_sz));
-            *p_new_pageno =  ViewStream_write(hViewStream, p_new_nd, n_node_sz);
+            *p_new_pageno =  viewStream_write(hViewStream, p_new_nd, n_node_sz);
 
 //split old nd
             eggIndexBoughRd_t* p_father_insert_rd = eggIndexRd_leaf_to_bough(eggIndexLeafNd_split(p_old_nd, p_new_nd, p_insert_rd,  rdCmp));
@@ -900,8 +904,8 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
             p_old_nd->next = *p_new_pageno;
 
 //update new nd and old nd to file
-            ViewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
-            ViewStream_update(hViewStream, p_new_nd, n_node_sz, * p_new_pageno);
+            viewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
+            viewStream_update(hViewStream, p_new_nd, n_node_sz, * p_new_pageno);
 
             eggIndexLeafNd_destroy(p_new_nd);
             lp_ret_rd = p_father_insert_rd;
@@ -909,14 +913,14 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
         else
         {
             eggIndexLeafNd_insert(p_old_nd,  p_insert_rd, rdCmp);
-            ViewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
+            viewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
             lp_ret_rd = EGG_NULL;             
         }
     }
     else
     {
         // the same with leaf node
-        rdCmp = rdcmp_bough_str;
+        rdCmp = (INDEXRDCMP)rdcmp_bough_str;
 
         eggIndexBoughNd_t* p_old_nd = (eggIndexBoughNd_t*)pNdList->nd;
         pageno_t n_old_pageno = pNdList->pageno;
@@ -947,8 +951,8 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
 
 
 //update new nd and old nd to file
-             ViewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
-             *p_new_pageno =  ViewStream_write(hViewStream, p_new_nd, n_node_sz);
+             viewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
+             *p_new_pageno =  viewStream_write(hViewStream, p_new_nd, n_node_sz);
 
              
              eggIndexBoughNd_destroy(p_new_nd);
@@ -969,7 +973,7 @@ eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eg
 
              eggIndexBoughNd_insert_withPos(p_old_nd,  p_insert_rd, p_insert_pos);
              
-             ViewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
+             viewStream_update(hViewStream, p_old_nd, n_node_sz, n_old_pageno);
              
              lp_ret_rd = EGG_NULL;
         }

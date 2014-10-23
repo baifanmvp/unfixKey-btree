@@ -50,7 +50,8 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_bview_OBJECTS = bview-main.$(OBJEXT) bview-eggIndex.$(OBJEXT)
+am_bview_OBJECTS = bview-main.$(OBJEXT) bview-eggIndex.$(OBJEXT) \
+	bview-ViewStream.$(OBJEXT)
 bview_OBJECTS = $(am_bview_OBJECTS)
 bview_DEPENDENCIES =
 DEFAULT_INCLUDES = -I.
@@ -81,16 +82,16 @@ DIST_ARCHIVES = $(distdir).tar.gz
 GZIP_ENV = --best
 distuninstallcheck_listfiles = find . -type f -print
 distcleancheck_listfiles = find . -type f -print
-ACLOCAL = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run aclocal-1.11
-AMTAR = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run tar
+ACLOCAL = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run aclocal-1.11
+AMTAR = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run tar
 AR = ar
-AUTOCONF = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run autoconf
-AUTOHEADER = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run autoheader
-AUTOMAKE = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run automake-1.11
+AUTOCONF = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run autoconf
+AUTOHEADER = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run autoheader
+AUTOMAKE = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run automake-1.11
 AWK = gawk
 CC = gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g3 -Wall -O0
+CFLAGS = -g3 -Wall -O0 
 CPP = gcc -E
 CPPFLAGS = 
 CYGPATH_W = echo
@@ -118,7 +119,7 @@ LIBTOOL = $(SHELL) $(top_builddir)/libtool
 LIPO = 
 LN_S = ln -s
 LTLIBOBJS = 
-MAKEINFO = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/missing --run makeinfo
+MAKEINFO = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/missing --run makeinfo
 MKDIR_P = /bin/mkdir -p
 NM = /usr/bin/nm -B
 NMEDIT = 
@@ -140,10 +141,10 @@ SET_MAKE =
 SHELL = /bin/bash
 STRIP = strip
 VERSION = VERSION
-abs_builddir = /home/bf/bf_tmp/unfixKey-btree
-abs_srcdir = /home/bf/bf_tmp/unfixKey-btree
-abs_top_builddir = /home/bf/bf_tmp/unfixKey-btree
-abs_top_srcdir = /home/bf/bf_tmp/unfixKey-btree
+abs_builddir = /home/bf/bf_tmp/kmp/unfixKey-btree
+abs_srcdir = /home/bf/bf_tmp/kmp/unfixKey-btree
+abs_top_builddir = /home/bf/bf_tmp/kmp/unfixKey-btree
+abs_top_srcdir = /home/bf/bf_tmp/kmp/unfixKey-btree
 ac_ct_CC = gcc
 ac_ct_DUMPBIN = 
 am__include = include
@@ -171,7 +172,7 @@ host_vendor = pc
 htmldir = ${docdir}
 includedir = ${prefix}/include
 infodir = ${datarootdir}/info
-install_sh = ${SHELL} /home/bf/bf_tmp/unfixKey-btree/install-sh
+install_sh = ${SHELL} /home/bf/bf_tmp/kmp/unfixKey-btree/install-sh
 libdir = ${exec_prefix}/lib
 libexecdir = ${exec_prefix}/libexec
 localedir = ${datarootdir}/locale
@@ -193,9 +194,9 @@ top_build_prefix =
 top_builddir = .
 top_srcdir = .
 AUTOMAKE_OPTIONS = foreign
-bview_SOURCES = main.c eggIndex.c
-bview_LDADD = -lglib-2.0 -legg3 
-bview_CPPFLAGS = `pkg-config --cflags glib-2.0 egg3`  -L/usr/local/lib -L/usr/local/lib/ 
+bview_SOURCES = main.c eggIndex.c ViewStream.c
+bview_LDADD = -lglib-2.0 
+bview_CPPFLAGS = -L/usr/local/lib -L/usr/local/lib/ 
 ACLOCAL_AMFLAGS = -I m4
 all: all-am
 
@@ -288,6 +289,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+include ./$(DEPDIR)/bview-ViewStream.Po
 include ./$(DEPDIR)/bview-eggIndex.Po
 include ./$(DEPDIR)/bview-main.Po
 
@@ -339,6 +341,20 @@ bview-eggIndex.obj: eggIndex.c
 #	source='eggIndex.c' object='bview-eggIndex.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bview_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bview-eggIndex.obj `if test -f 'eggIndex.c'; then $(CYGPATH_W) 'eggIndex.c'; else $(CYGPATH_W) '$(srcdir)/eggIndex.c'; fi`
+
+bview-ViewStream.o: ViewStream.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bview_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bview-ViewStream.o -MD -MP -MF $(DEPDIR)/bview-ViewStream.Tpo -c -o bview-ViewStream.o `test -f 'ViewStream.c' || echo '$(srcdir)/'`ViewStream.c
+	$(am__mv) $(DEPDIR)/bview-ViewStream.Tpo $(DEPDIR)/bview-ViewStream.Po
+#	source='ViewStream.c' object='bview-ViewStream.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bview_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bview-ViewStream.o `test -f 'ViewStream.c' || echo '$(srcdir)/'`ViewStream.c
+
+bview-ViewStream.obj: ViewStream.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bview_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT bview-ViewStream.obj -MD -MP -MF $(DEPDIR)/bview-ViewStream.Tpo -c -o bview-ViewStream.obj `if test -f 'ViewStream.c'; then $(CYGPATH_W) 'ViewStream.c'; else $(CYGPATH_W) '$(srcdir)/ViewStream.c'; fi`
+	$(am__mv) $(DEPDIR)/bview-ViewStream.Tpo $(DEPDIR)/bview-ViewStream.Po
+#	source='ViewStream.c' object='bview-ViewStream.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(bview_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o bview-ViewStream.obj `if test -f 'ViewStream.c'; then $(CYGPATH_W) 'ViewStream.c'; else $(CYGPATH_W) '$(srcdir)/ViewStream.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

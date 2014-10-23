@@ -1,8 +1,9 @@
-#include <egg3/Egg3.h>
-#include <egg3/storage/ViewStream.h>
-typedef offset64_t pageno_t;
-
-typedef void eggIndexRd_t;
+#ifndef _EGG_INDEX_H
+#define _EGG_INDEX_H
+#include <stdio.h>
+#include <stdlib.h>
+#include "eggDef.h"
+#include "ViewStream.h"
 
 typedef struct eggIndexBoughRd
 {
@@ -54,7 +55,7 @@ typedef struct eggIndexInf
 
 typedef struct eggIndex
 {
-     HVIEWSTREAM hViewStream;
+     viewStream_t* hViewStream;
     eggIndexInf_t info;
 }eggIndex_t;
 
@@ -65,10 +66,10 @@ typedef struct eggIndexNdList
     eggIndexNd_t* nd;
     struct eggIndexNdList* next;
 }eggIndexNdList_t;
-#define EGG_INVALID_PAGENO (0)
+#define EGG_INVALID_PAGENO (-1)
 
-#define EGG_IDXNDSZ (100)
-#define EGG_IDXRDMAXSZ (EGG_IDXNDSZ/3)
+#define EGG_IDXNDSZ (1000)
+#define EGG_IDXRDMAXSZ (EGG_IDXNDSZ/5)
 #define EGG_IDX_BOUGH_ND 1
 #define EGG_IDX_LEAF_ND  2
 
@@ -144,7 +145,7 @@ eggIndexLeafRd_t* eggIndexLeafNd_split(eggIndexLeafNd_t* pOrgNd, eggIndexLeafNd_
 
 int eggIndexNd_destroy(eggIndexNd_t* pNd);
 
-eggIndex_t* eggIndex_new(HVIEWSTREAM hViewStream, eggIndexInf_t* pInfo);
+eggIndex_t* eggIndex_new(viewStream_t* hViewStream, eggIndexInf_t* pInfo);
 
 int eggIndex_delete(eggIndex_t* lp_index);
 
@@ -155,3 +156,4 @@ int eggIndex_add(eggIndex_t* hIndexView, char* key, uint16_t kSz, char* val, uin
 int eggIndex_leafNd_result(eggIndex_t* hIndex);
 
 eggIndexRd_t* eggIndex_split(eggIndex_t* hIndex, eggIndexNdList_t* pNdList,   eggIndexRd_t* pInsertRd, pageno_t* p_new_pageno);
+#endif
