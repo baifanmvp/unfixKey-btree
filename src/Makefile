@@ -16,10 +16,10 @@
 
 
 
-pkgdatadir = $(datadir)/full-package-name
-pkgincludedir = $(includedir)/full-package-name
-pkglibdir = $(libdir)/full-package-name
-pkglibexecdir = $(libexecdir)/full-package-name
+pkgdatadir = $(datadir)/btree
+pkgincludedir = $(includedir)/btree
+pkglibdir = $(libdir)/btree
+pkglibexecdir = $(libexecdir)/btree
 am__cd = CDPATH="$${ZSH_VERSION+.}$(PATH_SEPARATOR)" && cd
 install_sh_DATA = $(install_sh) -c -m 644
 install_sh_PROGRAM = $(install_sh) -c
@@ -81,7 +81,7 @@ CFLAGS = -g3 -Wall -O0
 CPP = gcc -E
 CPPFLAGS = 
 CYGPATH_W = echo
-DEFS = -DPACKAGE_NAME=\"FULL-PACKAGE-NAME\" -DPACKAGE_TARNAME=\"full-package-name\" -DPACKAGE_VERSION=\"VERSION\" -DPACKAGE_STRING=\"FULL-PACKAGE-NAME\ VERSION\" -DPACKAGE_BUGREPORT=\"BUG-REPORT-ADDRESS\" -DPACKAGE_URL=\"\" -DPACKAGE=\"full-package-name\" -DVERSION=\"VERSION\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\"
+DEFS = -DPACKAGE_NAME=\"btree\" -DPACKAGE_TARNAME=\"btree\" -DPACKAGE_VERSION=\"1.0\" -DPACKAGE_STRING=\"btree\ 1.0\" -DPACKAGE_BUGREPORT=\"baifanmvp@163.com\" -DPACKAGE_URL=\"\" -DPACKAGE=\"btree\" -DVERSION=\"1.0\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1 -DLT_OBJDIR=\".libs/\"
 DEPDIR = .deps
 DSYMUTIL = 
 DUMPBIN = 
@@ -113,20 +113,20 @@ OBJDUMP = objdump
 OBJEXT = o
 OTOOL = 
 OTOOL64 = 
-PACKAGE = full-package-name
-PACKAGE_BUGREPORT = BUG-REPORT-ADDRESS
-PACKAGE_NAME = FULL-PACKAGE-NAME
-PACKAGE_STRING = FULL-PACKAGE-NAME VERSION
-PACKAGE_TARNAME = full-package-name
+PACKAGE = btree
+PACKAGE_BUGREPORT = baifanmvp@163.com
+PACKAGE_NAME = btree
+PACKAGE_STRING = btree 1.0
+PACKAGE_TARNAME = btree
 PACKAGE_URL = 
-PACKAGE_VERSION = VERSION
+PACKAGE_VERSION = 1.0
 PATH_SEPARATOR = :
 RANLIB = ranlib
 SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/bash
 STRIP = strip
-VERSION = VERSION
+VERSION = 1.0
 abs_builddir = /home/bf/bf_tmp/kmp/unfixKey-btree/src
 abs_srcdir = /home/bf/bf_tmp/kmp/unfixKey-btree/src
 abs_top_builddir = /home/bf/bf_tmp/kmp/unfixKey-btree
